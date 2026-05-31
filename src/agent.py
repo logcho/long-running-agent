@@ -68,6 +68,13 @@ You can call the following tools:
 9. `run_command(command: str)`: Run shell commands in the workspace root.
 10. `finish_task(summary: str)`: Call this tool when you have fully completed the task.
 
+--- DYNAMIC TOOL CREATION ---
+If you need to perform an action but do not have a specific tool for it (for example, converting file formats, parsing complex log structures, or performing multi-step calculations), you should CREATE the tool yourself!
+To do this:
+1. Write a Python script implementing the desired tool functionality using the `write_file` tool.
+2. Execute the script using the `run_command` tool (e.g. `.venv/bin/python your_script.py`) to run it and read the output.
+This lets you dynamically solve any task even if a pre-made tool doesn't exist.
+
 --- RESPONSE FORMAT ---
 You must output a reasoning thought process first, followed by a tool call.
 If you want to call a tool, you can do so natively. If your environment does not support native tool calling, output a markdown JSON block:
@@ -323,8 +330,8 @@ def route_after_agent(state: AgentState):
         print("\n[System Warning]: Max iterations reached! Going to self-reflection.")
         return "improve"
         
-    # If no tool calls, and not finished, go to improve
-    return "improve"
+    # If no tool calls, and not finished, let the agent continue reasoning in a new iteration
+    return "agent"
 
 def route_after_action(state: AgentState):
     # Check if active messages list is too crowded
@@ -338,7 +345,8 @@ workflow.add_conditional_edges(
     route_after_agent,
     {
         "action": "action",
-        "improve": "improve"
+        "improve": "improve",
+        "agent": "agent"
     }
 )
 

@@ -48,10 +48,11 @@ def run_agent(task_text, context_limit=None, max_iter=None, provider=None):
     # Run the graph
     # We can stream the steps of the graph to display what node is running
     try:
-        final_state = None
+        current_state = initial_state.copy()
         for step in agent_app.stream(initial_state, {"recursion_limit": config.MAX_ITERATIONS * 3}):
             for node_name, state_update in step.items():
                 print(f"\n>>> Node Finished: {node_name}")
+                current_state.update(state_update)
                 if "summary" in state_update and state_update["summary"]:
                     print(f"[Node Output - Summary updated]: {state_update['summary'][:150]}...")
                 if "current_plan" in state_update and state_update["current_plan"]:
@@ -59,14 +60,14 @@ def run_agent(task_text, context_limit=None, max_iter=None, provider=None):
                 if "finished" in state_update:
                     print(f"[Node Output - Finished flag]: {state_update['finished']}")
                 
-                # Capture the last state update
-                final_state = state_update
-                
         from src.token_tracker import TokenTracker
         print("\n" + "="*50)
         print("         AGENT EXECUTION COMPLETED          ")
         print("="*50)
         print("Execution finished successfully.")
+        print("\n--- Final Summary of Accomplished Task ---")
+        print(current_state.get("summary", "No summary provided by the agent."))
+        print("-" * 42)
         print(f"Total Run Prompt Tokens: {TokenTracker.prompt_tokens}")
         print(f"Total Run Completion Tokens: {TokenTracker.completion_tokens}")
         print(f"Total Run Tokens Used: {TokenTracker.total_tokens}")
