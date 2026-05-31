@@ -1,0 +1,6 @@
+langgraph>=0.0.10
+langchain-core>=0.1.0
+langchain-community>=0.0.10
+ollama>=0.2.0
+numpy>=1.20.0
+pydantic>=2.0
