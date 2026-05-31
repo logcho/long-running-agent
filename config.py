@@ -1,8 +1,19 @@
 import os
+from dotenv import load_dotenv
+
+# Load environment variables from .env file if present
+load_dotenv()
+
+# Provider Settings (options: 'ollama', 'openai')
+LLM_PROVIDER = os.getenv("LLM_PROVIDER", "ollama")
 
 # Ollama Settings
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "gemma4:latest")
 OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+
+# OpenAI Settings
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
+OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o")
 
 # Agent Limits
 MAX_ITERATIONS = int(os.getenv("MAX_ITERATIONS", "30"))

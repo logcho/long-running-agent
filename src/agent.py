@@ -4,7 +4,7 @@ from langgraph.graph import StateGraph, END
 # Import configuration
 import config
 from src.state import AgentState
-from src.ollama_client import OllamaClient
+from src.llm_client import get_llm_client
 
 # Import tools
 from src.tools.rag_tool import RAGSearchTool, RAGAddDocumentTool
@@ -98,7 +98,7 @@ Only call ONE tool per turn. If you want to finish the task, you MUST call the `
         FinishTaskTool()
     ]
     
-    client = OllamaClient()
+    client = get_llm_client()
     content, tool_calls = client.chat(messages, tools=tools_list)
     
     print(f"\n[Agent Thoughts]:\n{content}")
@@ -163,6 +163,7 @@ def action_node(state: AgentState):
         func_info = tc.get("function", {})
         name = func_info.get("name")
         args = func_info.get("arguments", {})
+        call_id = tc.get("id") or f"call_{name}_{state['iterations']}"
         print(f"\n[Tool Action]: Executing {name}...")
         
         result = ""
@@ -198,6 +199,7 @@ def action_node(state: AgentState):
         new_messages.append({
             "role": "tool",
             "name": name,
+            "tool_call_id": call_id,
             "content": str(result)
         })
         steps_taken.append(f"Iteration {state['iterations']}: Ran {name} -> {str(result)[:100]}...")
@@ -230,7 +232,7 @@ Chat History:
 
 Write your summary now:"""
 
-    client = OllamaClient()
+    client = get_llm_client()
     summary_content, _ = client.chat(messages=[{"role": "user", "content": summary_prompt}])
     
     print(f"\n[Summarization Result]:\n{summary_content}\n")
@@ -273,7 +275,7 @@ Format your lessons learned as clean, actionable instructions (e.g. "When compil
 
 Lessons Learned:"""
 
-    client = OllamaClient()
+    client = get_llm_client()
     reflection_content, _ = client.chat(messages=[{"role": "user", "content": reflection_prompt}])
     
     print(f"\n[Self-Reflection Lessons Learned]:\n{reflection_content}\n")

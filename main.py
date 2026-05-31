@@ -6,8 +6,11 @@ from src.agent import agent_app
 from src.tools.memory_tool import memory_manager
 from src.tools.rag_tool import rag_system
 
-def run_agent(task_text, context_limit=None, max_iter=None):
+def run_agent(task_text, context_limit=None, max_iter=None, provider=None):
     # Override configuration if provided via CLI
+    if provider is not None:
+        config.LLM_PROVIDER = provider.lower()
+        print(f"[Config] Override: LLM_PROVIDER = {config.LLM_PROVIDER}")
     if context_limit is not None:
         config.CONTEXT_WINDOW_LIMIT = context_limit
         print(f"[Config] Override: CONTEXT_WINDOW_LIMIT = {context_limit}")
@@ -59,10 +62,19 @@ def run_agent(task_text, context_limit=None, max_iter=None):
                 # Capture the last state update
                 final_state = state_update
                 
+        from src.token_tracker import TokenTracker
         print("\n" + "="*50)
         print("         AGENT EXECUTION COMPLETED          ")
         print("="*50)
         print("Execution finished successfully.")
+        print(f"Total Run Prompt Tokens: {TokenTracker.prompt_tokens}")
+        print(f"Total Run Completion Tokens: {TokenTracker.completion_tokens}")
+        print(f"Total Run Tokens Used: {TokenTracker.total_tokens}")
+        if getattr(config, "LLM_PROVIDER", "ollama").lower() == "openai":
+            total_cost = (TokenTracker.prompt_tokens / 1_000_000) * TokenTracker.INPUT_COST_PER_M + (TokenTracker.completion_tokens / 1_000_000) * TokenTracker.OUTPUT_COST_PER_M
+            print(f"Estimated OpenAI Cost: ${total_cost:.5f}")
+        else:
+            print("Estimated API Cost: $0.00 (Ollama)")
         print("="*50 + "\n")
 
     except KeyboardInterrupt:
@@ -77,7 +89,13 @@ def main():
     parser.add_argument(
         "--task", 
         type=str, 
-        help="The task you want the agent to accomplish. If not specified, a default test task will run."
+        help="The task you want the agent to accomplish. If not specified, the CLI will prompt you."
+    )
+    parser.add_argument(
+        "--provider",
+        type=str,
+        choices=["ollama", "openai"],
+        help="Select LLM provider ('ollama' or 'openai')."
     )
     parser.add_argument(
         "--context-limit",
@@ -95,15 +113,24 @@ def main():
     # Default task if none is provided
     task = args.task
     if not task:
-        task = (
-            "Create a new python script 'hello_world.py' in the workspace root. "
-            "It should print a nice welcome message and current system time. "
-            "Run it using the terminal tool to verify it executes without error. "
-            "Write a short markdown file 'result_summary.md' detailing the script's output, "
-            "then call finish_task to complete your work."
-        )
+        print("\n--- Long-Running LangGraph Agent CLI ---")
+        try:
+            task = input("Enter the task you want the agent to accomplish (leave empty for default test task):\n> ").strip()
+        except KeyboardInterrupt:
+            print("\nAborted.")
+            sys.exit(0)
+            
+        if not task:
+            task = (
+                "Create a new python script 'hello_world.py' in the workspace root. "
+                "It should print a nice welcome message and current system time. "
+                "Run it using the terminal tool to verify it executes without error. "
+                "Write a short markdown file 'result_summary.md' detailing the script's output, "
+                "then call finish_task to complete your work."
+            )
+            print(f"Using default test task: {task}\n")
 
-    run_agent(task, args.context_limit, args.max_iter)
+    run_agent(task, args.context_limit, args.max_iter, args.provider)
 
 if __name__ == "__main__":
     main()
